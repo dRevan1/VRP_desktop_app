@@ -1,8 +1,13 @@
-import data
+#import data_handler
 
 class Graph:
-    def __init__(self, data: data.Data):
-        self.data = data
+    def __init__(self):
+        self.nodes = []  # vrcholy
+        self.edges = [] # hrany
+        self.capacity: int = 0 # kapacita vozidiel
+        self.center: int = 0
+        self.mode_nodes: int = 0
+        self.mode_edges: int = 0
         self.D: list[list[int]] = []
         self.routes: list[list[int]] = []
         
