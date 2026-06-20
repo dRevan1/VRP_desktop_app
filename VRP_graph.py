@@ -1,16 +1,86 @@
-#import data_handler
+import node
+import edge
+import heapq as queue
+import numpy as np
 
 class Graph:
     def __init__(self):
-        self.nodes = []  # vrcholy
-        self.edges = [] # hrany
+        self.nodes: list[node.Node] = []  # vrcholy
+        self.edges_star: list[list[edge.Edge]] = [] # hrany - hviezda, pre každý vrchol obsahuje list jeho hrán
+        self.edges = [] # zoznam hrán - na zápis
+        self.max_cost = 0 # najdrahšia hrana + 1, použije sa ako "nekonečno" pri A* algoritme, aktualizuje sa počas behu programu (ak sa pridávajú/odoberajú hrany)
         self.capacity: int = 0 # kapacita vozidiel
         self.center: int = 0
         self.mode_nodes: int = 0
         self.mode_edges: int = 0
         self.D: list[list[int]] = []
         self.routes: list[list[int]] = []
+    
+    
+    #
+    # DOPLNIT KED BUDE NODE Z QT DORIESENY - OZNACENIE ODTRHNUTEHO VRCHOLU
+    #
+    def complete_distance_matrix(self):
+        if len(self.nodes) == 0:
+            return 1, "Completing distance matrix failed - nodes list is empty!"
+        if len(self.edges) == 0 or len(self.edges_star) == 0:
+            return 1, "Completing distance matrix failed - edges list is empty!"
+        if len(self.D) == 0:
+            return 1, "Completing distance matrix failed - base matrix was not initialized!"
+        if self.max_cost == 0:
+            return 1, "Completing distance matrix failed - maximum edge cost was not initialized!"
         
+        for i in range(len(self.D)):
+            isolated = True # ak je vrchol izolovaný, tak sa to označí, aby sa potom vykreslil s označením
+            for j in range(len(self.D[i])):
+                if self.D[i][j] != -1:
+                    isolated = False
+                    continue
+                result, distance, *_ = self.run_A_star(i, j) # nájde (možno) cestu medzi vrcholmi i a j a vráti jej cenu, pokiaľ taká nie je z načítaných hrán
+                if result == 0: # ak sa našla cesta - cena sa symetricky priradí
+                    isolated = False
+                    self.D[i][j] = self.D[j][i] = distance
+            if isolated:
+                a = True # ddpolniť potom pri vykresľovaní - nastavič node na ISOLATED
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # implementácia algoritmu A*, pokúsi sa nájsť najkratšiu cestu medzi vrcholmi s ID start (začiatok) a end (koniec), ak nájde, vráti výsledok a úspešnosť "0", inak "1"
+    # berie index vrcholov ako parametre, teda od 0
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    def run_A_star(self, start_node, end_node):
+        result, path_cost, path = 1, -1, [] # result = úspešnosť, zmení sa na 0 ak sa cesta nájde
+        g = [self.max_cost for node in range(len(self.nodes))] # ohodnocovacia funkcia g, na začiatku sú hodnoty "nekonečno", teda najdrahšia hrana + 1
+        g[start_node] = 0
+        pred = [-1 for node in range(len(self.nodes))] # vektor s predchodcami, na získanie výslednej cesty
+        prior_q = [] # toto bude prioritný front
+        queue.heappush(prior_q, (1, start_node))
+        
+        while(len(prior_q) > 0):
+            _, _from = queue.heappop(prior_q)
+            if _from == end_node:
+                result = 0
+                break
+            for edge in self.edges_star[_from]:
+                to = edge.to - 1 # v hranách sú ID, takže pre index treba - 1
+                if (g[_from] + edge.cost) < g[to]:
+                    pred[to] = _from # nastavenie predchodcu pre koncový vrchol
+                    g[to] = g[_from] + edge.cost # nastavenie značky pre koncový vrchol
+                    from_np = np.array([self.nodes[to].posX, self.nodes[to].posY])
+                    to_np = np.array([self.nodes[end_node].posX, self.nodes[end_node].posY])
+                    h = np.linalg.norm(from_np - to_np) # hodnota h - predpokladaná vzdialenosť od daného vrcholu do konca - získaná cez L2 normu
+                    priority = g[to] + h # priorita je súčet g a h, teda ohodnocovacích funkcií
+                    queue.heappush(prior_q, (priority, to))
+        
+        if result == 0:
+            node = end_node
+            while node != start_node:
+                path.append(node)
+                path_cost += self.D[node][pred[node]]
+                node = pred[node]
+            
+            path.append(start_node)
+            path.reverse()
+        
+        return result, path_cost, path
     #-------------------------------------------------------------------------------------------------------------------------------
     # vráti riešenie TSP pomocou metódy najbližšieho suseda zo zadaného indexu, index v parametre je číslo vrchola, teda začína od 1 
     #-------------------------------------------------------------------------------------------------------------------------------

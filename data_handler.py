@@ -1,7 +1,7 @@
 from pathlib import Path
 import VRP_graph as VRP
-import node
-import edge
+import numpy as np
+from math import floor
 
 class Data_handler:    
     #------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -24,26 +24,42 @@ class Data_handler:
             n, graph.capacity, graph.center, graph.mode_nodes = map(int, f.readline().split())
             for i in range(n):
                 id, x, y, demand, name = f.readline().split()
+                id, x, y, demand = int(id), float(x), float(y), int(demand)
                 _type = 0 if id != graph.center else 1
-                graph.nodes.append(node.Node(id, x, y, demand, name, _type))
+                graph.nodes.append(VRP.node.Node(id, x, y, demand, name, _type))
+            
+            graph.edges_star.extend([] for node in range(n)) # inicializácia hviezdy - n prázdnych listov v edges_star
+            graph.D.extend([-1] * n for node in range(n)) # inicializácia matice vzdialeností - n * n s hodnotou -1
             
             # načítanie hrán
             n, graph.mode_edges = map(int, f.readline().split())
+            id = 0
             for i in range(n):
                 _from = to = cost = -1
-                if graph.mode_edges == 0:
+                if graph.mode_edges == 0: # ceny sú zadané
                     _from, to, cost = f.readline().split()
-                elif graph.mode_edges == 1:
-                    _from, to = f.readline().split()
-                    
-                graph.edges.append(edge.Edge(i, _from, to, cost)) 
+                elif graph.mode_edges == 1: # ceny sa počítajú L2 normou
+                    _from, to = map(int, f.readline().split())
+                    from_np = np.array([graph.nodes[_from - 1].posX, graph.nodes[_from - 1].posY])
+                    to_np = np.array([graph.nodes[to - 1].posX, graph.nodes[to - 1].posY])
+                    cost = floor(np.linalg.norm(from_np - to_np))   
+                
+                _from, to, cost = int(_from), int(to), float(cost)
+                graph.edges.append(VRP.edge.Edge(id, _from, to, cost))
+                graph.edges_star[_from - 1].append(VRP.edge.Edge(id, _from, to, cost)) # vrcholy sú indexované od 1 - teda index v programe bude i - 1
+                id += 1
+                graph.edges_star[to - 1].append(VRP.edge.Edge(id, to, _from, cost))
+                id += 1
+                graph.D[_from - 1][to - 1] = graph.D[to - 1][_from - 1] = cost # doplnenie existujúcich hrán do matice vzdialeností
+                if (cost + 1) > graph.max_cost:
+                    graph.max_cost = (cost + 1) # aktualizácia hornej hranice pre A* - najdrahšia hrana + 1, namiesto nekonečna pri inicializácii g
                 
             # načítanie (optional) matice vzdialeností
             n = int(f.readline())
             for i in range(n):
                 line = f.readline()
-                dist = list(map(int, line.split()))
-                graph.D.append(dist)
+                dist = list(map(float, line.split()))
+                graph.D[i] = dist
     #-------------------------------------------------------------------
     # uloží údaje do .txt súboru s rovnakým formátom, ako pri načítavaní
     #-------------------------------------------------------------------
