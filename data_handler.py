@@ -26,10 +26,13 @@ class Data_handler:
                 id, x, y, demand, name = f.readline().split()
                 id, x, y, demand = int(id), float(x), float(y), int(demand)
                 _type = 0 if id != graph.center else 1
-                graph.nodes.append(VRP.node.Node(id, x, y, demand, name, _type))
+                graph.nodes.append(VRP.Node(id, x, y, demand, name, _type))
             
             graph.edges_star.extend([] for node in range(n)) # inicializácia hviezdy - n prázdnych listov v edges_star
-            graph.D.extend([-1] * n for node in range(n)) # inicializácia matice vzdialeností - n * n s hodnotou -1
+            for i in range(n): # inicializácia matice vzdialeností - n * n s hodnotou -1
+                row = [-1 for col in range(n)]
+                row[i] = 0
+                graph.D.append(row)
             
             # načítanie hrán
             n, graph.mode_edges = map(int, f.readline().split())
@@ -45,14 +48,12 @@ class Data_handler:
                     cost = floor(np.linalg.norm(from_np - to_np))   
                 
                 _from, to, cost = int(_from), int(to), float(cost)
-                graph.edges.append(VRP.edge.Edge(id, _from, to, cost))
-                graph.edges_star[_from - 1].append(VRP.edge.Edge(id, _from, to, cost)) # vrcholy sú indexované od 1 - teda index v programe bude i - 1
+                graph.edges.append(VRP.Edge(id, _from, to, cost))
+                graph.edges_star[_from - 1].append(VRP.Edge(id, _from, to, cost)) # vrcholy sú indexované od 1 - teda index v programe bude i - 1
                 id += 1
-                graph.edges_star[to - 1].append(VRP.edge.Edge(id, to, _from, cost))
+                graph.edges_star[to - 1].append(VRP.Edge(id, to, _from, cost))
                 id += 1
                 graph.D[_from - 1][to - 1] = graph.D[to - 1][_from - 1] = cost # doplnenie existujúcich hrán do matice vzdialeností
-                if (cost + 1) > graph.max_cost:
-                    graph.max_cost = (cost + 1) # aktualizácia hornej hranice pre A* - najdrahšia hrana + 1, namiesto nekonečna pri inicializácii g
                 
             # načítanie (optional) matice vzdialeností
             n = int(f.readline())
@@ -63,7 +64,7 @@ class Data_handler:
     #-------------------------------------------------------------------
     # uloží údaje do .txt súboru s rovnakým formátom, ako pri načítavaní
     #-------------------------------------------------------------------
-    def save_data(self, network_path: str, save_dist, graph: VRP.Graph):
+    def save_data(self, network_path: str, save_dist, graph: VRP):
         with open(network_path, 'w') as f:
             # zápis vrcholov
             control_str = [len(graph.nodes), graph.capacity, graph.center, graph.mode_nodes] # prvý riadok pre vrcholy

@@ -1,22 +1,21 @@
-import node
-import edge
+from node import Node
+from edge import Edge
 import heapq as queue
 import numpy as np
 
 class Graph:
     def __init__(self):
-        self.nodes: list[node.Node] = []  # vrcholy
-        self.edges_star: list[list[edge.Edge]] = [] # hrany - hviezda, pre každý vrchol obsahuje list jeho hrán
+        self.nodes: list[Node] = []  # vrcholy
+        self.edges_star: list[list[Edge]] = [] # hrany - hviezda, pre každý vrchol obsahuje list jeho hrán
         self.edges = [] # zoznam hrán - na zápis
-        self.max_cost = 0 # najdrahšia hrana + 1, použije sa ako "nekonečno" pri A* algoritme, aktualizuje sa počas behu programu (ak sa pridávajú/odoberajú hrany)
         self.capacity: int = 0 # kapacita vozidiel
         self.center: int = 0
         self.mode_nodes: int = 0
         self.mode_edges: int = 0
         self.D: list[list[int]] = []
         self.routes: list[list[int]] = []
-    
-    
+     
+     
     #
     # DOPLNIT KED BUDE NODE Z QT DORIESENY - OZNACENIE ODTRHNUTEHO VRCHOLU
     #
@@ -27,14 +26,13 @@ class Graph:
             return 1, "Completing distance matrix failed - edges list is empty!"
         if len(self.D) == 0:
             return 1, "Completing distance matrix failed - base matrix was not initialized!"
-        if self.max_cost == 0:
-            return 1, "Completing distance matrix failed - maximum edge cost was not initialized!"
         
         for i in range(len(self.D)):
             isolated = True # ak je vrchol izolovaný, tak sa to označí, aby sa potom vykreslil s označením
             for j in range(len(self.D[i])):
                 if self.D[i][j] != -1:
-                    isolated = False
+                    if self.D[i][j] != 0:
+                        isolated = False
                     continue
                 result, distance, *_ = self.run_A_star(i, j) # nájde (možno) cestu medzi vrcholmi i a j a vráti jej cenu, pokiaľ taká nie je z načítaných hrán
                 if result == 0: # ak sa našla cesta - cena sa symetricky priradí
@@ -48,11 +46,11 @@ class Graph:
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     def run_A_star(self, start_node, end_node):
         result, path_cost, path = 1, -1, [] # result = úspešnosť, zmení sa na 0 ak sa cesta nájde
-        g = [self.max_cost for node in range(len(self.nodes))] # ohodnocovacia funkcia g, na začiatku sú hodnoty "nekonečno", teda najdrahšia hrana + 1
+        g = [float('inf') for node in range(len(self.nodes))] # ohodnocovacia funkcia g, na začiatku sú hodnoty "nekonečno", teda najdrahšia hrana + 1
         g[start_node] = 0
         pred = [-1 for node in range(len(self.nodes))] # vektor s predchodcami, na získanie výslednej cesty
         prior_q = [] # toto bude prioritný front
-        queue.heappush(prior_q, (1, start_node))
+        queue.heappush(prior_q, (0, start_node))
         
         while(len(prior_q) > 0):
             _, _from = queue.heappop(prior_q)
@@ -71,10 +69,10 @@ class Graph:
                     queue.heappush(prior_q, (priority, to))
         
         if result == 0:
+            path_cost = g[end_node]
             node = end_node
             while node != start_node:
                 path.append(node)
-                path_cost += self.D[node][pred[node]]
                 node = pred[node]
             
             path.append(start_node)
@@ -120,10 +118,10 @@ class Graph:
     
         for i in range(1, len(route) - 1):
             subtour.append(route[i])
-            used_capacity += self.data.nodes[route[i]].demand
+            used_capacity += self.nodes[route[i]].demand
             next_node = route[i + 1]
         
-            if i == (len(route) - 2) or (self.data.nodes[next_node].demand + used_capacity) > self.data.capacity:
+            if i == (len(route) - 2) or (self.nodes[next_node].demand + used_capacity) > self.capacity:
                 subtour.append(route[0])
                 self.routes.append((subtour, used_capacity))
                 subtour = []
