@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QToolBar, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QGraphicsScene, QFormLayout, QLabel, QGridLayout
+from PyQt6.QtWidgets import QToolBar, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QGraphicsScene, QFormLayout, QLabel, QGridLayout, QFileDialog, QMessageBox
 from PyQt6.QtGui import QAction, QActionGroup, QIcon
 from PyQt6.QtCore import Qt
 from graph_view import Graph_view
@@ -35,20 +35,23 @@ class Main_window(QMainWindow):
         main_layout.addLayout(row2, 20)
         self.panel_widget = QWidget() # info panel vľavo
         self.info_panel = QFormLayout(self.panel_widget)
-        self.info_panel.addRow("Node ID:", QLabel("5"))
-        self.info_panel.addRow("X:", QLabel("120"))
-        self.info_panel.addRow("Y:", QLabel("340"))
+        self.update_info_panel()
         
         # inicializácia grafu a riadkov
         self.graph_widget = QWidget() # samostatný widget pre grid layout grafu a mierok/osí
         self.graph_layout = QGridLayout(self.graph_widget)
         self.scene = QGraphicsScene()
+        self.scene.setSceneRect(0, -2_000_000, 2_000_000, 2_000_000)
         self.graph_view = Graph_view(self.scene)
         self.h_scale = Graph_scale_view(self.graph_view) # horizontálna mierka/pravítko
         self.v_scale = Graph_scale_view(self.graph_view, True) # vertikálna mierka/pravítko
         self.graph_layout.addWidget(self.h_scale, 1, 1)
         self.graph_layout.addWidget(self.v_scale, 0, 0)
         self.graph_layout.addWidget(self.graph_view, 0, 1)
+        self.graph_view.horizontalScrollBar().valueChanged.connect(self.h_scale.update)
+        self.graph_view.horizontalScrollBar().valueChanged.connect(self.v_scale.update)
+        self.graph_view.verticalScrollBar().valueChanged.connect(self.h_scale.update)
+        self.graph_view.verticalScrollBar().valueChanged.connect(self.v_scale.update)
         
         row1.addWidget(self.panel_widget, 1) # pridanie prvkov do riadkov
         row1.addWidget(self.graph_widget, 14)
@@ -58,9 +61,13 @@ class Main_window(QMainWindow):
         
         # inicializácia menu
         self.menu_bar = self.menuBar().addMenu("File")
-        self.menu_bar.addAction("New File...")
-        self.menu_bar.addAction("Open File...")
-        self.menu_bar.addAction("Save File...")
+        self.new_file = self.menu_bar.addAction("New File...")
+        self.open_file = self.menu_bar.addAction("Open File...")
+        self.save_file = self.menu_bar.addAction("Save File...")
+        self.new_file.triggered.connect(self.new_file_action)
+        self.open_file.triggered.connect(self.open_file_action)
+        self.save_file.triggered.connect(self.save_file_action)
+        self.save_file.setEnabled(False)
         
         # inicializácia tool bar
         self.toolbar = QToolBar(self)
@@ -88,3 +95,83 @@ class Main_window(QMainWindow):
         self.toolbar.addAction(self.cursor_action)
         self.toolbar.addAction(self.add_node_action)
         self.toolbar.addAction(self.add_edge_action)
+    #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # akcia napojená na otvorenie nového súboru z menu, ak je neuložená práca, najskôr sa spýta užívateľa, či chce projekt uložiť, potom sa resetujú štruktúry a tým sa vytvorí nový "projekt"
+    #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------   
+    def new_file_action(self):
+        if self.app.graph_changed:
+            reply = QMessageBox.warning(self, "Save project", "Do you want to save the project before creating a new one?", 
+                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, 
+                                     QMessageBox.StandardButton.Yes)
+            if (reply == QMessageBox.StandardButton.Yes):
+                self.save_file_action()
+        
+        self.app.project_name = "New project"
+        self.update_info_panel()
+        self.app.graph.init_structures()
+        self.save_file.setEnabled(False)
+    #-------------------------------------------------------------------------------------------------------------------------------------------------------
+    # akcia napojená na otvorenie súboru, ak sú neuložené zmeny, najskôr sa spýta užívateľa, či chce uložiť projekt, potom sa otvorí QFileDialog na uloženie
+    # na konci sa aktualizuje názov otvoreného súbora pre výpis v aplikácii
+    #-------------------------------------------------------------------------------------------------------------------------------------------------------
+    def open_file_action(self):
+        if self.app.graph_changed:
+            reply = QMessageBox.warning(self, "Save project", "Do you want to save the project before opening a new one?", 
+                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, 
+                                     QMessageBox.StandardButton.Yes)
+            if (reply == QMessageBox.StandardButton.Yes):
+                self.save_file_action()
+        
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Open Text File - Graph Network",
+            "",
+            "Text Files (*.txt);;All Files (*)"
+        )    
+        if file_path: 
+            self.app.project_name = file_path.split('/')[-1].split('.')[0] # názov otvoreného projektu bude zobrazený v aplikácii - spraví sa split podľa / a potom podľa .
+            self.update_info_panel()
+            self.app.load_new_network(file_path)
+            self.save_file.setEnabled(True)
+    #---------------------------------------------------------------------------------------------------
+    # akcia napojená na uloženie súbora z menu, spýta sa, či chce užívateľ uložiť aj maticu vzdialeností
+    # na konci je info okno, keď sa projekt uložil úspešne
+    #---------------------------------------------------------------------------------------------------
+    def save_file_action(self):
+        reply = QMessageBox.question(self, "Save weights", "Do you want to save edge weights (distance matrix)?", 
+                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, 
+                                     QMessageBox.StandardButton.Yes)
+        reply = (reply == QMessageBox.StandardButton.Yes)   
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Text File - Graph Network",
+            "",
+            "Text Files (*.txt);;All Files (*)"
+        )
+        if file_path:
+            self.app.save_network(file_path, reply)
+            self.app.graph_changed = False
+            QMessageBox.information(self, "Project saved", "Your project has been saved successfully.", QMessageBox.StandardButton.Ok, QMessageBox.StandardButton.Ok)
+    #----------------------------------------------------------------------------------------------------------------------------------------------------------
+    # aktualizuje info panel - odstráni súčasbé riadky a pridá názov projektu + všetky riadky v liste "fields" vo podobe stringu vo formáte názov_poľa: hodnota
+    #----------------------------------------------------------------------------------------------------------------------------------------------------------
+    def update_info_panel(self, fields: list[tuple] = None):
+        while self.info_panel.rowCount():
+            self.info_panel.removeRow(0)
+        
+        self.info_panel.addRow("Project open:", QLabel(self.app.project_name))
+        if fields is None:
+            return
+        for row in fields:
+            self.info_panel.addRow(row[0] + ": ", QLabel(str(row[1])))
+    #------------------------------------------------------------------------------------------------------------------
+    # override close eventu, pred ukončením aplikácie sa pri neuložených zmenách spýta, či chce užívateľ uložiť projekt
+    #------------------------------------------------------------------------------------------------------------------    
+    def closeEvent(self, a0):
+        if self.app.graph_changed:
+            reply = QMessageBox.warning(self, "Save project", "Do you want to save the project before exiting?", 
+                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, 
+                                     QMessageBox.StandardButton.Yes)
+            if (reply == QMessageBox.StandardButton.Yes):
+                self.save_file_action()
+        return super().closeEvent(a0)

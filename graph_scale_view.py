@@ -10,7 +10,7 @@ class Graph_scale_view(QWidget):
     def __init__(self, view: Graph_view, vertical: bool = False):
         super().__init__()
         self.vertical = vertical
-        self.view = view  
+        self.view = view
         if vertical: # nastavenie fixného druhého rozmeru podľa orientácie mierky
             self.setFixedWidth(40)
         else:
@@ -25,22 +25,14 @@ class Graph_scale_view(QWidget):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         pen = QPen(QColor('black'), 1)
         painter.setPen(pen)
-        point = 0
-        step = 0
         
         if self.vertical:
-            while point < self.height():
-                if step % self.view.scale_step == 0:
-                    painter.drawText(2, self.height() - (int(point)), str(int(point))) # keďže súradnice začínajú hore vľavo, treba kresliť na bottom - offset, alebo ísť od height do 0
-                    step = 0
-                point += self.view.grid_size
-                step += 1
+            for screen_y in range(0, self.height(), self.view.grid_size * self.view.scale_step):
+                scene_y = self.view.mapToScene(0, screen_y).y() * -1 # scene je súradnica, ktorá sa vykreslí (na mierke v aplikácii)
+                painter.drawText(2, screen_y, str(int(scene_y)))
         else:
-            while point < self.width():
-                if step % self.view.scale_step == 0:
-                    painter.drawText((int(point) + 2), 10, str(int(point)))
-                    step = 0
-                point += self.view.grid_size
-                step += 1
+            for screen_x in range(0, self.width(), self.view.grid_size * self.view.scale_step):
+                scene_x = self.view.mapToScene(screen_x, 0).x()
+                painter.drawText(screen_x, 10, str(int(scene_x)))
                 
         painter.end()

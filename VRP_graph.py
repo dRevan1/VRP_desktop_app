@@ -5,6 +5,12 @@ import numpy as np
 
 class Graph:
     def __init__(self):
+        self.init_structures()
+     
+    #-----------------------------------------------------------------------------------------------------------------------------
+    # inicializuje štruktúry, použije sa tiež napríklad pri načítavaní novej siete v aplikácii alebo keď sa vytvorí nový "projekt"
+    #-----------------------------------------------------------------------------------------------------------------------------
+    def init_structures(self):
         self.nodes: list[Node] = []  # vrcholy
         self.edges_star: list[list[Edge]] = [] # hrany - hviezda, pre každý vrchol obsahuje list jeho hrán
         self.edges = [] # zoznam hrán - na zápis
@@ -14,8 +20,6 @@ class Graph:
         self.mode_edges: int = 0
         self.D: list[list[int]] = []
         self.routes: list[list[int]] = []
-     
-     
     #
     # DOPLNIT KED BUDE NODE Z QT DORIESENY - OZNACENIE ODTRHNUTEHO VRCHOLU
     #
