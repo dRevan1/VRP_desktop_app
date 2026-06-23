@@ -3,6 +3,7 @@ from PyQt6.QtGui import QAction, QActionGroup, QIcon
 from PyQt6.QtCore import Qt
 from graph_view import Graph_view
 from graph_scale_view import Graph_scale_view
+from coords_view import Coords_view
 from app import App
 
 
@@ -31,6 +32,7 @@ class Main_window(QMainWindow):
         #inicializácia layoutu
         row1 = QHBoxLayout()
         row2 = QHBoxLayout()
+        col1 = QVBoxLayout()
         main_layout.addLayout(row1, 80) # riadky aj s pomerom priestoru, ktorý zaberú (na výšku)
         main_layout.addLayout(row2, 20)
         self.panel_widget = QWidget() # info panel vľavo
@@ -42,7 +44,8 @@ class Main_window(QMainWindow):
         self.graph_layout = QGridLayout(self.graph_widget)
         self.scene = QGraphicsScene()
         self.scene.setSceneRect(0, -2_000_000, 2_000_000, 2_000_000)
-        self.graph_view = Graph_view(self.scene)
+        self.graph_view = Graph_view(self.scene, self.app)
+        self.coords_view = Coords_view(self.graph_view)
         self.h_scale = Graph_scale_view(self.graph_view) # horizontálna mierka/pravítko
         self.v_scale = Graph_scale_view(self.graph_view, True) # vertikálna mierka/pravítko
         self.graph_layout.addWidget(self.h_scale, 1, 1)
@@ -53,7 +56,9 @@ class Main_window(QMainWindow):
         self.graph_view.verticalScrollBar().valueChanged.connect(self.h_scale.update)
         self.graph_view.verticalScrollBar().valueChanged.connect(self.v_scale.update)
         
-        row1.addWidget(self.panel_widget, 1) # pridanie prvkov do riadkov
+        col1.addWidget(self.panel_widget, 9)
+        col1.addWidget(self.coords_view, 1)
+        row1.addLayout(col1, 1)
         row1.addWidget(self.graph_widget, 14)
         self.console = QTextEdit()
         self.console.setReadOnly(True)
@@ -133,6 +138,7 @@ class Main_window(QMainWindow):
             self.update_info_panel()
             self.app.load_new_network(file_path)
             self.save_file.setEnabled(True)
+            self.graph_view.draw_network()
     #---------------------------------------------------------------------------------------------------
     # akcia napojená na uloženie súbora z menu, spýta sa, či chce užívateľ uložiť aj maticu vzdialeností
     # na konci je info okno, keď sa projekt uložil úspešne
@@ -152,9 +158,9 @@ class Main_window(QMainWindow):
             self.app.save_network(file_path, reply)
             self.app.graph_changed = False
             QMessageBox.information(self, "Project saved", "Your project has been saved successfully.", QMessageBox.StandardButton.Ok, QMessageBox.StandardButton.Ok)
-    #----------------------------------------------------------------------------------------------------------------------------------------------------------
-    # aktualizuje info panel - odstráni súčasbé riadky a pridá názov projektu + všetky riadky v liste "fields" vo podobe stringu vo formáte názov_poľa: hodnota
-    #----------------------------------------------------------------------------------------------------------------------------------------------------------
+    #--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # aktualizuje info panel - odstráni súčasbé riadky a pridá názov projektu + všetky riadky v liste "fields" vo podobe tuple s názvom poľa a hodnotou (v pôvodnom type)
+    #--------------------------------------------------------------------------------------------------------------------------------------------------------------------
     def update_info_panel(self, fields: list[tuple] = None):
         while self.info_panel.rowCount():
             self.info_panel.removeRow(0)

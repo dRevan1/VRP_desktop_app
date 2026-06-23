@@ -7,27 +7,28 @@ class Graph:
     def __init__(self):
         self.init_structures()
      
+     
     #-----------------------------------------------------------------------------------------------------------------------------
     # inicializuje štruktúry, použije sa tiež napríklad pri načítavaní novej siete v aplikácii alebo keď sa vytvorí nový "projekt"
     #-----------------------------------------------------------------------------------------------------------------------------
     def init_structures(self):
         self.nodes: list[Node] = []  # vrcholy
         self.edges_star: list[list[Edge]] = [] # hrany - hviezda, pre každý vrchol obsahuje list jeho hrán
-        self.edges = [] # zoznam hrán - na zápis
+        self.edges: list[Edge] = [] # zoznam hrán - na zápis
         self.capacity: int = 0 # kapacita vozidiel
         self.center: int = 0
         self.mode_nodes: int = 0
         self.mode_edges: int = 0
         self.D: list[list[int]] = []
         self.routes: list[list[int]] = []
-    #
-    # DOPLNIT KED BUDE NODE Z QT DORIESENY - OZNACENIE ODTRHNUTEHO VRCHOLU
-    #
+        self.ID_map: dict[int, int] = {}
+        self.next_ID = 1
+    #-------------------------------------------------------------------------------
+    # skontroluje veci na výpočet - či je inicializovaná matica D a listy s vrcholmi
+    #-------------------------------------------------------------------------------
     def complete_distance_matrix(self):
         if len(self.nodes) == 0:
             return 1, "Completing distance matrix failed - nodes list is empty!"
-        if len(self.edges) == 0 or len(self.edges_star) == 0:
-            return 1, "Completing distance matrix failed - edges list is empty!"
         if len(self.D) == 0:
             return 1, "Completing distance matrix failed - base matrix was not initialized!"
         

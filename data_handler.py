@@ -27,6 +27,9 @@ class Data_handler:
                 id, x, y, demand = int(id), float(x), float(y), int(demand)
                 _type = 0 if id != graph.center else 1
                 graph.nodes.append(VRP.Node(id, x, y, demand, name, _type))
+                graph.ID_map[id] = i
+                if id > graph.next_ID:
+                    graph.next_ID = id
             
             graph.edges_star.extend([] for node in range(n)) # inicializácia hviezdy - n prázdnych listov v edges_star
             for i in range(n): # inicializácia matice vzdialeností - n * n s hodnotou -1

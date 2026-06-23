@@ -16,7 +16,7 @@ class Graph_scale_view(QWidget):
         else:
             self.setFixedHeight(20)
 
-
+    
     #----------------------------------------------------------------------------------------------------------------------------------
     # metóda robí vykreslenie hodnôt, podobne ako graph_view ide postupne od svojho začiatku až po koniec a s krokom vykresľuje hodnoty
     #----------------------------------------------------------------------------------------------------------------------------------
