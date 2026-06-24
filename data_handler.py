@@ -41,22 +41,25 @@ class Data_handler:
             n, graph.mode_edges = map(int, f.readline().split())
             id = 0
             for i in range(n):
-                _from = to = cost = -1
+                _from_ID = to_ID = cost = -1
                 if graph.mode_edges == 0: # ceny sú zadané
-                    _from, to, cost = f.readline().split()
+                    _from_ID, to_ID, cost = f.readline().split()
+                    _from, to = graph.ID_map[_from_ID], graph.ID_map[to_ID] # index cez ID z mapy
                 elif graph.mode_edges == 1: # ceny sa počítajú L2 normou
-                    _from, to = map(int, f.readline().split())
-                    from_np = np.array([graph.nodes[_from - 1].posX, graph.nodes[_from - 1].posY])
-                    to_np = np.array([graph.nodes[to - 1].posX, graph.nodes[to - 1].posY])
+                    _from_ID, to_ID = map(int, f.readline().split())
+                    _from, to = graph.ID_map[_from_ID], graph.ID_map[to_ID]
+                    from_np = np.array([graph.nodes[_from].pos().x(), graph.nodes[_from].pos().y()])
+                    to_np = np.array([graph.nodes[to].pos().x(), graph.nodes[to].pos().y()])
                     cost = floor(np.linalg.norm(from_np - to_np))   
                 
-                _from, to, cost = int(_from), int(to), float(cost)
-                graph.edges.append(VRP.Edge(id, _from, to, cost))
-                graph.edges_star[_from - 1].append(VRP.Edge(id, _from, to, cost)) # vrcholy sú indexované od 1 - teda index v programe bude i - 1
+                _from_ID, to_ID, cost = int(_from_ID), int(to_ID), float(cost)
+                _from_pos = graph.nodes[_from].pos()
+                to_pos = graph.nodes[to].pos()
+                graph.edges.append(VRP.Edge(id, _from_ID, _from_pos.x(), _from_pos.y(), to_ID, to_pos.x(), to_pos.y(), cost))
+                graph.edges_star[_from].append(VRP.Edge(id, _from_ID, _from_pos.x(), _from_pos.y(), to_ID, to_pos.x(), to_pos.y(), cost)) # vrcholy majú ID od 1 vyššie
+                graph.edges_star[to].append(VRP.Edge(id, to_ID, to_pos.x(), to_pos.y(), _from_ID, _from_pos.x(), _from_pos.y(), cost))
                 id += 1
-                graph.edges_star[to - 1].append(VRP.Edge(id, to, _from, cost))
-                id += 1
-                graph.D[_from - 1][to - 1] = graph.D[to - 1][_from - 1] = cost # doplnenie existujúcich hrán do matice vzdialeností
+                graph.D[_from][to] = graph.D[to][_from] = cost # doplnenie existujúcich hrán do matice vzdialeností
                 
             # načítanie (optional) matice vzdialeností
             n = int(f.readline())
@@ -67,13 +70,13 @@ class Data_handler:
     #-------------------------------------------------------------------
     # uloží údaje do .txt súboru s rovnakým formátom, ako pri načítavaní
     #-------------------------------------------------------------------
-    def save_data(self, network_path: str, save_dist, graph: VRP):
+    def save_data(self, network_path: str, save_dist, graph: VRP.Graph):
         with open(network_path, 'w') as f:
             # zápis vrcholov
             control_str = [len(graph.nodes), graph.capacity, graph.center, graph.mode_nodes] # prvý riadok pre vrcholy
             f.write(' '.join(map(str, control_str)) + '\n')
             for node in graph.nodes:
-                node_str = [node.ID, node.posX, node.posY, node.demand, node.name]
+                node_str = [node.ID, node.pos().x(), node.pos().y(), node.demand, node.name]
                 f.write(' '.join(map(str, node_str)) + '\n')
                 
             # zápis hrán

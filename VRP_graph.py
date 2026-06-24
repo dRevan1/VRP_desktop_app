@@ -67,8 +67,8 @@ class Graph:
                 if (g[_from] + edge.cost) < g[to]:
                     pred[to] = _from # nastavenie predchodcu pre koncový vrchol
                     g[to] = g[_from] + edge.cost # nastavenie značky pre koncový vrchol
-                    from_np = np.array([self.nodes[to].posX, self.nodes[to].posY])
-                    to_np = np.array([self.nodes[end_node].posX, self.nodes[end_node].posY])
+                    from_np = np.array([self.nodes[to].pos().x(), self.nodes[to].pos().y()])
+                    to_np = np.array([self.nodes[end_node].pos().x(), self.nodes[end_node].pos().y()])
                     h = np.linalg.norm(from_np - to_np) # hodnota h - predpokladaná vzdialenosť od daného vrcholu do konca - získaná cez L2 normu
                     priority = g[to] + h # priorita je súčet g a h, teda ohodnocovacích funkcií
                     queue.heappush(prior_q, (priority, to))

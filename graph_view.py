@@ -1,6 +1,6 @@
-from PyQt6.QtWidgets import QGraphicsView, QLabel
-from PyQt6.QtGui import QPainter, QPen, QColor, QBrush, QCursor, QPixmap
-from PyQt6.QtCore import QLineF, pyqtSignal, Qt
+from PyQt6.QtWidgets import QGraphicsView
+from PyQt6.QtGui import QPainter, QPen, QColor
+from PyQt6.QtCore import QLineF, pyqtSignal
 from app import App
 
 #---------------------------------------------------------------------------------------------
@@ -12,7 +12,6 @@ class Graph_view(QGraphicsView):
     zoom_in_factor = 1.15
     zoom_out_factor = 1 / zoom_in_factor
     mouse_coords = pyqtSignal(float, float)
-    node_radius = 8.0
     
     def __init__(self, scene, app: App):
         super().__init__(scene)
@@ -22,26 +21,13 @@ class Graph_view(QGraphicsView):
         self.viewport().setMouseTracking(True)
         self.centerOn(0, 0)
         self.app = app
-        
-        pixmap = QPixmap(20, 20)
-        pixmap.fill(Qt.GlobalColor.transparent)
-        painter = QPainter(pixmap)
-        painter.drawEllipse(2, 2, 16, 16)
-        painter.end()
-        self.setCursor(QCursor(pixmap, 10, 10))
     
     def draw_network(self):
         for edge in self.app.graph.edges:
-            _from = self.app.graph.nodes[edge._from - 1]
-            to = self.app.graph.nodes[edge.to - 1]
-            self.scene().addLine(_from.posX, _from.posY * -1, to.posX, to.posY * -1, QPen(QColor("black"), 0.8))
-        for node in self.app.graph.nodes:
-            if node.ID == self.app.graph.center:
-                self.scene().addEllipse(node.posX - (self.node_radius / 2), (node.posY + (self.node_radius / 2)) * -1, 
-                                        self.node_radius, self.node_radius, QPen(QColor("green"), 2), QBrush(QColor("green")))
-                continue       
-            self.scene().addEllipse(node.posX - (self.node_radius / 2), (node.posY + (self.node_radius / 2)) * -1, 
-                                    self.node_radius, self.node_radius, QPen(QColor("black"), 2), QBrush(QColor("black")))
+            self.scene().addItem(edge)
+            print(edge.line())
+        for node in self.app.graph.nodes:    
+            self.scene().addItem(node)
     #----------------------------------------------------------------------------------------------------------------
     # táto metóda vykresľuje mriežku, teda pozadie okna
     # postupne sa od začiatku prejde horizontálne na koniec a vykreslia sa hodnoty s daným krokom, rovnako vertikálne
