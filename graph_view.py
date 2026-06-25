@@ -1,6 +1,6 @@
-from PyQt6.QtWidgets import QGraphicsView
-from PyQt6.QtGui import QPainter, QPen, QColor, QBrush
-from PyQt6.QtCore import QLineF, pyqtSignal, QPointF
+from PyQt6.QtWidgets import QGraphicsView, QMenu, QInputDialog
+from PyQt6.QtGui import QPainter, QPen, QColor
+from PyQt6.QtCore import QLineF, pyqtSignal, QPointF, Qt
 from app import App
 from node import Node
 from edge import Edge
@@ -17,6 +17,7 @@ class Graph_view(QGraphicsView):
     graph_change = pyqtSignal(bool) # flag či bola vykonaná nejaká zmena - pridanie/vymazanie vrchola/hrany atd., podľa toho sa pýta užívateľa pri rôznych akciách, či chce uložiť súbor
     item_info = pyqtSignal(list)
     selected_item = None
+    from_node: Node = None
     
     def __init__(self, scene, app: App):
         super().__init__(scene)
@@ -65,9 +66,45 @@ class Graph_view(QGraphicsView):
     #------------------------------------------------------------------------------------------------------------------------------------
     def add_node(self, mouse_pos: QPointF):
         self.scene().addItem(self.app.add_node(mouse_pos.x(), mouse_pos.y()))
-              
-    def add_edge(self):
-        self.app.remove_edge()
+    #------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # API na backend v app - vyskúša pridať hranu, ak sa vráti none, tak sa nepridá, ale stále zachováme vybraný počiatočný vrchol, v tomto prípade to znamená buď pridávanie hrany
+    # s rovnakým začiatočným a koncovým vrcholom, alebo medzi vrcholy, kde už hrana existuje, inak hranu pridá do scény a nastaví vybranú na None - samotné pridanie
+    # do štruktúr je v app v "add_edge" metóde
+    #------------------------------------------------------------------------------------------------------------------------------------------------------------------------------       
+    def add_edge(self, _from, to):
+        new_edge = self.app.add_edge(_from, to)
+        if new_edge is not None:
+            self.scene().addItem(new_edge)
+            self.item_info.emit([])
+            self.from_node = None
+            self.graph_change.emit(True)
+    #----------------------------------------------------------------------------------------------------------
+    # otvorí dialógové okno na zmenu mena vrchola a aktualizuje panel, keďže vrchol je stále vybraný "selected"
+    #----------------------------------------------------------------------------------------------------------       
+    def rename_node(self, ID):
+        node = self.app.graph.nodes[self.app.graph.node_ID_map[ID]]
+        new_name, ok = QInputDialog.getText(self, "Rename Node", "Node name:", text=node.name)
+        if ok and new_name:
+            node.name = new_name
+            self.item_info.emit(node.get_string())
+    #----------------------------------------------------------------------
+    # otvorí dialógové okno na zmenu požiadavky vrchola a aktualizuje panel
+    #----------------------------------------------------------------------
+    def set_demand(self, ID):
+        node = self.app.graph.nodes[self.app.graph.node_ID_map[ID]]
+        new_demand, ok = QInputDialog.getInt(self, "Set demand", "Node demand:", value=node.demand, min=0)
+        if ok and new_demand:
+            node.demand = new_demand
+            self.item_info.emit(node.get_string())
+    #--------------------------------------------------------------
+    # otvorí dialógové okno na zmenu ceny hrany a aktualizuje panel
+    #--------------------------------------------------------------
+    def set_cost(self, ID):
+        edge = self.app.graph.edges[self.app.graph.edge_ID_map[ID]]
+        new_cost, ok = QInputDialog.getDouble(self, "Set edge cost", "Edge cost:", value=edge.cost, min=0.0, decimals=2)
+        if ok and new_cost:
+            edge.cost = new_cost
+            self.item_info.emit(edge.get_string())
     #------------------------------
     # aktualizuje súradnice kurzora
     #------------------------------
@@ -84,11 +121,14 @@ class Graph_view(QGraphicsView):
             self.scale(self.zoom_in_factor, self.zoom_in_factor)
         else:
             self.scale(self.zoom_out_factor, self.zoom_out_factor)
-    #
-    #
-    #
+    #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # táto metóda spravuje klikacie akcie - keď sa klikne do grafu tak podľa vybraného nástroja a podľa ostatných vlajok sa spravuje akcia
+    # pri kurzore sa označujú a odznačujú prvky podľa oblasti kurzora, pri vrcholoch sa pridávajú vrcholy a pri hranách sa vyberá počiatočný alebo koncový vrchol hrany a pridáva sa
+    # pri kliknutí pravým tlačidlom na prvok sa zobrazí drop down menu na zmeny - napríklad cena hrany, meno vrchola, nastavenie vrchola ako centrum atd.
+    #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     def mousePressEvent(self, event):
         mouse_pos = self.mapToScene(event.pos())
+        
         if self.app.selected_menu_tool == 0:
             item = self.itemAt(event.pos())
             if isinstance(item, Node) or isinstance(item, Edge):
@@ -102,11 +142,58 @@ class Graph_view(QGraphicsView):
                 self.item_info.emit([])
                 if self.selected_item is not None:
                     self.selected_item.deselect()
-                self.selected_item = None
-        elif self.app.selected_menu_tool == 1:
+                self.selected_item = None             
+        elif self.app.selected_menu_tool == 1 and event.button() == Qt.MouseButton.LeftButton:
             self.add_node(mouse_pos)
-            self.graph_change.emit(True)
-        elif self.app.selected_menu_tool == 2:
-            self.add_edge(mouse_pos)
-            self.graph_change.emit(True)
+            self.graph_change.emit(True)       
+        elif self.app.selected_menu_tool == 2 and event.button() == Qt.MouseButton.LeftButton:
+            item = self.itemAt(event.pos())
+            if not isinstance(item, Node) or (self.from_node is not None and self.from_node.ID == item.ID):
+                super().mousePressEvent(event)
+                return
+            else:
+                if self.from_node is None:
+                    self.from_node = item
+                    self.item_info.emit([("Selected start: ", self.from_node.ID)])
+                else:
+                    self.add_edge(self.from_node.ID, item.ID)
+            
         super().mousePressEvent(event)
+    #--------------------------------------------------------------------------------------
+    # event na kontext menu - keď sa pravým tlačidlom klikne na vrchol/hranu - zoznam akcií
+    #--------------------------------------------------------------------------------------
+    def contextMenuEvent(self, event):
+        if self.app.selected_menu_tool != 0:
+            return
+        
+        item = self.itemAt(event.pos())      
+        if isinstance(item, Node):
+            menu = QMenu(self)
+            edit_node_action = menu.addAction("Rename")
+            edit_demand_action = menu.addAction("Set demand")
+            edit_center_action = menu.addAction("Set as source")
+            delete_node_action = menu.addAction("Delete")
+            action = menu.exec(event.globalPos())
+            
+            if action == edit_node_action:
+                self.rename_node(item.ID)
+            elif action == edit_demand_action:
+                self.set_demand(item.ID)
+            elif action == edit_center_action:
+                self.app.set_center(item.ID)
+            elif action == delete_node_action:
+                True
+        elif isinstance(item, Edge):
+            menu = QMenu(self)
+            edit_edge_action = menu.addAction("Set cost")
+            delete_edge_action = menu.addAction("Delete")
+            action = menu.exec(event.globalPos())
+            
+            if action == edit_edge_action:
+                self.set_cost(item.ID)    
+            elif action == delete_edge_action:
+                True
+        else:
+            return
+                
+        return super().contextMenuEvent(event)

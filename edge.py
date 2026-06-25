@@ -7,6 +7,7 @@ class Edge(QGraphicsLineItem):
         self.setLine(_fromX, _fromY, toX, toY)
         self.color = QColor("black")
         self.setPen(QPen(self.color, 0.8))
+        self.setZValue(0) # stack hodnota - aby bola hrana "pod" vrcholom, inak pri kliku na vrchol selektuje hranu
         self.ID = ID
         self._from = _from
         self.to = to

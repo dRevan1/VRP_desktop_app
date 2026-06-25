@@ -20,10 +20,31 @@ class Graph:
         self.mode_edges: int = 0
         self.D: list[list[int]] = []
         self.routes: list[list[int]] = []
-        self.ID_map: dict[int, int] = {}
-        self.next_ID = 1
-        self.connected = True
+        self.node_ID_map: dict[int, int] = {}
+        self.edge_ID_map: dict[int, int] = {}
+        self.next_node_ID = 1
+        self.next_edge_ID = 1
+        self.connected = True # či je graf spojený - ak nie, tak nevykonávame VRP
+        # počet izolovaných vrcholov - keď niekoľko pridáme a potom ich mažeme, tak sa môže stať, že zostane nespojený graf, ale to sa zistí iba pri počítaní matice D
+        # nie pri pridávaní vrcholov a ich mazaní, ak nemajú žiadne hrany - preto ak pti mazaní izolovaného vrchola zostane 0 izolovaných - skontroluje sa spojitosť grafu (A* star na D)
         self.isolated_nodes = 0
+    #--------------------------------------------------------------------------------------------------------------------------------
+    # použije sa na prepočítanie matice D - pri pridaní/mazaní hrany, nie na reset pri načítaní alebo vytvorení nového projektu/siete
+    #--------------------------------------------------------------------------------------------------------------------------------
+    def reset_D(self):
+        if len(self.nodes) > 0:
+            self.D = []
+            self.isolated_nodes = 0
+            for i in range(len(self.nodes)): # inicializácia matice vzdialeností - n * n s hodnotou -1
+                row = [-1 for col in range(len(self.nodes))]
+                row[i] = 0
+                self.D.append(row)
+                
+            for edge in self.edges:
+                _from = self.node_ID_map[edge._from]
+                to = self.node_ID_map[edge._from]
+                self.D[_from][to] = edge.cost
+                self.D[to][_from] = edge.cost
     #-------------------------------------------------------------------------------
     # skontroluje veci na výpočet - či je inicializovaná matica D a listy s vrcholmi
     #-------------------------------------------------------------------------------
@@ -32,6 +53,7 @@ class Graph:
             return 1, "Completing distance matrix failed - nodes list is empty!"
         if len(self.D) == 0:
             return 1, "Completing distance matrix failed - base matrix was not initialized!"
+        connected = True
         
         for i in range(len(self.D)):
             isolated = True # ak je vrchol izolovaný, tak sa to označí, aby sa potom vykreslil s označením
@@ -44,9 +66,11 @@ class Graph:
                 if result == 0: # ak sa našla cesta - cena sa symetricky priradí
                     isolated = False
                     self.D[i][j] = self.D[j][i] = distance
+                else:
+                    connected = False
             if isolated:
                 self.isolated_nodes += 1
-                self.connected = False
+            self.connected = connected
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # implementácia algoritmu A*, pokúsi sa nájsť najkratšiu cestu medzi vrcholmi s ID start (začiatok) a end (koniec), ak nájde, vráti výsledok a úspešnosť "0", inak "1"
     # berie index vrcholov ako parametre, teda od 0

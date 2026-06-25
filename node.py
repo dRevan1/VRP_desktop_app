@@ -7,11 +7,12 @@ class Node(QGraphicsEllipseItem):
         self.setPos(posX, -posY)
         self.color = QColor("black") if type == 0 else QColor("green")
         self.setBrush(QBrush(self.color))
-        self.setPen(QPen(self.color, 2))       
+        self.setPen(QPen(self.color, 2))
+        self.setZValue(1) # stack hodnota - aby bol vrchol "nad" hranou, inak pri kliku na vrchol selektuje hranu
         self.ID = ID
         self.demand = demand
         self.name = name
-        
+    
     def get_string(self):
         rows = []
         rows.append(("Node ID", self.ID))
@@ -25,7 +26,6 @@ class Node(QGraphicsEllipseItem):
     def set_center(self):
         self.color = QColor("green")
         self.setBrush(QBrush(self.color))
-        self.setPen(QPen(self.color, 2))
     
     def set_default(self):
         self.color = QColor("black")

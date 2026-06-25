@@ -1,7 +1,6 @@
 from pathlib import Path
 import VRP_graph as VRP
 import numpy as np
-from math import floor
 
 class Data_handler:    
     #------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -27,10 +26,10 @@ class Data_handler:
                 id, x, y, demand = int(id), float(x), float(y), int(demand)
                 _type = 0 if id != graph.center else 1
                 graph.nodes.append(VRP.Node(id, x, y, demand, name, _type))
-                graph.ID_map[id] = i
-                if id > graph.next_ID:
-                    graph.next_ID = id
-            graph.next_ID += 1
+                graph.node_ID_map[id] = i
+                if id > graph.next_node_ID:
+                    graph.next_node_ID = id
+            graph.next_node_ID += 1
             
             graph.edges_star.extend([] for node in range(n)) # inicializácia hviezdy - n prázdnych listov v edges_star
             for i in range(n): # inicializácia matice vzdialeností - n * n s hodnotou -1
@@ -40,26 +39,26 @@ class Data_handler:
             
             # načítanie hrán
             n, graph.mode_edges = map(int, f.readline().split())
-            id = 0
             for i in range(n):
                 _from_ID = to_ID = cost = -1
                 if graph.mode_edges == 0: # ceny sú zadané
                     _from_ID, to_ID, cost = f.readline().split()
-                    _from, to = graph.ID_map[_from_ID], graph.ID_map[to_ID] # index cez ID z mapy
+                    _from, to = graph.node_ID_map[_from_ID], graph.node_ID_map[to_ID] # index cez ID z mapy
                 elif graph.mode_edges == 1: # ceny sa počítajú L2 normou
                     _from_ID, to_ID = map(int, f.readline().split())
-                    _from, to = graph.ID_map[_from_ID], graph.ID_map[to_ID]
+                    _from, to = graph.node_ID_map[_from_ID], graph.node_ID_map[to_ID]
                     from_np = np.array([graph.nodes[_from].pos().x(), graph.nodes[_from].pos().y()])
                     to_np = np.array([graph.nodes[to].pos().x(), graph.nodes[to].pos().y()])
-                    cost = floor(np.linalg.norm(from_np - to_np))   
+                    cost = round(np.linalg.norm(from_np - to_np), 2)   
                 
                 _from_ID, to_ID, cost = int(_from_ID), int(to_ID), float(cost)
                 _from_pos = graph.nodes[_from].pos()
                 to_pos = graph.nodes[to].pos()
-                graph.edges.append(VRP.Edge(id, _from_ID, _from_pos.x(), _from_pos.y(), to_ID, to_pos.x(), to_pos.y(), cost))
-                graph.edges_star[_from].append(VRP.Edge(id, _from_ID, _from_pos.x(), _from_pos.y(), to_ID, to_pos.x(), to_pos.y(), cost)) # vrcholy majú ID od 1 vyššie
-                graph.edges_star[to].append(VRP.Edge(id, to_ID, to_pos.x(), to_pos.y(), _from_ID, _from_pos.x(), _from_pos.y(), cost))
-                id += 1
+                graph.edges.append(VRP.Edge(graph.next_edge_ID, _from_ID, _from_pos.x(), _from_pos.y(), to_ID, to_pos.x(), to_pos.y(), cost))
+                graph.edges_star[_from].append(VRP.Edge(graph.next_edge_ID, _from_ID, _from_pos.x(), _from_pos.y(), to_ID, to_pos.x(), to_pos.y(), cost)) # vrcholy majú ID od 1 vyššie
+                graph.edges_star[to].append(VRP.Edge(graph.next_edge_ID, to_ID, to_pos.x(), to_pos.y(), _from_ID, _from_pos.x(), _from_pos.y(), cost))
+                graph.edge_ID_map[graph.next_edge_ID] = i
+                graph.next_edge_ID += 1
                 graph.D[_from][to] = graph.D[to][_from] = cost # doplnenie existujúcich hrán do matice vzdialeností
                 
             # načítanie (optional) matice vzdialeností

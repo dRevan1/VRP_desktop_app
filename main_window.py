@@ -175,14 +175,24 @@ class Main_window(QMainWindow):
     def select_cursor(self):
         self.app.selected_menu_tool = 0
         self.graph_view.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+        self.graph_view.from_node = None
   
     def select_add_node(self):
         self.app.selected_menu_tool = 1
         self.graph_view.setDragMode(QGraphicsView.DragMode.NoDrag)
+        self.graph_view.from_node = None
+        if self.graph_view.selected_item is not None:
+            self.graph_view.selected_item.deselect()
+            self.graph_view.selected_item = None
+        self.graph_view.item_info.emit([])   
    
     def select_add_edge(self):
         self.app.selected_menu_tool = 2
         self.graph_view.setDragMode(QGraphicsView.DragMode.NoDrag)
+        if self.graph_view.selected_item is not None:
+            self.graph_view.selected_item.deselect()
+            self.graph_view.selected_item = None
+        self.graph_view.item_info.emit([])
     #--------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # aktualizuje info panel - odstráni súčasbé riadky a pridá názov projektu + všetky riadky v liste "fields" vo podobe tuple s názvom poľa a hodnotou (v pôvodnom type)
     #--------------------------------------------------------------------------------------------------------------------------------------------------------------------
