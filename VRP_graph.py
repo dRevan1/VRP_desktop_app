@@ -17,12 +17,13 @@ class Graph:
         self.edges: list[Edge] = [] # zoznam hrán - na zápis
         self.capacity: int = 0 # kapacita vozidiel
         self.center: int = 0
-        self.mode_nodes: int = 0
         self.mode_edges: int = 0
         self.D: list[list[int]] = []
         self.routes: list[list[int]] = []
         self.ID_map: dict[int, int] = {}
         self.next_ID = 1
+        self.connected = True
+        self.isolated_nodes = 0
     #-------------------------------------------------------------------------------
     # skontroluje veci na výpočet - či je inicializovaná matica D a listy s vrcholmi
     #-------------------------------------------------------------------------------
@@ -44,7 +45,8 @@ class Graph:
                     isolated = False
                     self.D[i][j] = self.D[j][i] = distance
             if isolated:
-                a = True # ddpolniť potom pri vykresľovaní - nastavič node na ISOLATED
+                self.isolated_nodes += 1
+                self.connected = False
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # implementácia algoritmu A*, pokúsi sa nájsť najkratšiu cestu medzi vrcholmi s ID start (začiatok) a end (koniec), ak nájde, vráti výsledok a úspešnosť "0", inak "1"
     # berie index vrcholov ako parametre, teda od 0

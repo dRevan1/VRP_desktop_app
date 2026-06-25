@@ -21,7 +21,7 @@ class Data_handler:
         
         # načítanie vrcholov
         with open(file_path, 'r') as f:
-            n, graph.capacity, graph.center, graph.mode_nodes = map(int, f.readline().split())
+            n, graph.capacity, graph.center = map(int, f.readline().split())
             for i in range(n):
                 id, x, y, demand, name = f.readline().split()
                 id, x, y, demand = int(id), float(x), float(y), int(demand)
@@ -30,6 +30,7 @@ class Data_handler:
                 graph.ID_map[id] = i
                 if id > graph.next_ID:
                     graph.next_ID = id
+            graph.next_ID += 1
             
             graph.edges_star.extend([] for node in range(n)) # inicializácia hviezdy - n prázdnych listov v edges_star
             for i in range(n): # inicializácia matice vzdialeností - n * n s hodnotou -1
@@ -73,10 +74,10 @@ class Data_handler:
     def save_data(self, network_path: str, save_dist, graph: VRP.Graph):
         with open(network_path, 'w') as f:
             # zápis vrcholov
-            control_str = [len(graph.nodes), graph.capacity, graph.center, graph.mode_nodes] # prvý riadok pre vrcholy
+            control_str = [len(graph.nodes), graph.capacity, graph.center] # prvý riadok pre vrcholy
             f.write(' '.join(map(str, control_str)) + '\n')
             for node in graph.nodes:
-                node_str = [node.ID, node.pos().x(), node.pos().y(), node.demand, node.name]
+                node_str = [node.ID, round(node.pos().x(), 2), round(node.pos().y() * -1, 2), node.demand, node.name]
                 f.write(' '.join(map(str, node_str)) + '\n')
                 
             # zápis hrán
