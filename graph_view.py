@@ -66,6 +66,7 @@ class Graph_view(QGraphicsView):
     #------------------------------------------------------------------------------------------------------------------------------------
     def add_node(self, mouse_pos: QPointF):
         self.scene().addItem(self.app.add_node(mouse_pos.x(), mouse_pos.y()))
+        self.graph_change.emit(True) 
     #------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # API na backend v app - vyskúša pridať hranu, ak sa vráti none, tak sa nepridá, ale stále zachováme vybraný počiatočný vrchol, v tomto prípade to znamená buď pridávanie hrany
     # s rovnakým začiatočným a koncovým vrcholom, alebo medzi vrcholy, kde už hrana existuje, inak hranu pridá do scény a nastaví vybranú na None - samotné pridanie
@@ -87,6 +88,7 @@ class Graph_view(QGraphicsView):
         if ok and new_name:
             node.name = new_name
             self.item_info.emit(node.get_string())
+            self.graph_change.emit(True) 
     #----------------------------------------------------------------------
     # otvorí dialógové okno na zmenu požiadavky vrchola a aktualizuje panel
     #----------------------------------------------------------------------
@@ -96,6 +98,17 @@ class Graph_view(QGraphicsView):
         if ok and new_demand:
             node.demand = new_demand
             self.item_info.emit(node.get_string())
+            self.graph_change.emit(True)
+    #------------------------------------------------------------------------------------------------------------
+    # metóda získa list hrán a prioritný front ich ID pre mazanie v "app", potom ich odstráni zo scény, aj vrchol
+    #------------------------------------------------------------------------------------------------------------
+    def delete_node(self, node: Node):
+        edge_list, prior_q = self.app.get_nodes_edges(node)
+        for edge in edge_list:
+            self.scene().removeItem(edge)
+        self.app.remove_node(node, prior_q)
+        self.scene().removeItem(node)
+        self.item_info.emit([])
     #--------------------------------------------------------------
     # otvorí dialógové okno na zmenu ceny hrany a aktualizuje panel
     #--------------------------------------------------------------
@@ -104,7 +117,19 @@ class Graph_view(QGraphicsView):
         new_cost, ok = QInputDialog.getDouble(self, "Set edge cost", "Edge cost:", value=edge.cost, min=0.0, decimals=2)
         if ok and new_cost:
             edge.cost = new_cost
+            edge.label.setPlainText(str(round(edge.cost, 2)))
             self.item_info.emit(edge.get_string())
+            self.graph_change.emit(True)
+    #-------------------------------
+    # zavolá odstránenie hrany v app
+    #-------------------------------
+    def delete_edge(self, edge: Edge):
+        index = self.app.graph.edge_ID_map[edge.ID]
+        self.app.remove_edge(edge)
+        self.app.update_edge_IDs(index)
+        self.scene().removeItem(edge)
+        self.graph_change.emit(True) 
+        self.item_info.emit([])
     #------------------------------
     # aktualizuje súradnice kurzora
     #------------------------------
@@ -144,8 +169,7 @@ class Graph_view(QGraphicsView):
                     self.selected_item.deselect()
                 self.selected_item = None             
         elif self.app.selected_menu_tool == 1 and event.button() == Qt.MouseButton.LeftButton:
-            self.add_node(mouse_pos)
-            self.graph_change.emit(True)       
+            self.add_node(mouse_pos)      
         elif self.app.selected_menu_tool == 2 and event.button() == Qt.MouseButton.LeftButton:
             item = self.itemAt(event.pos())
             if not isinstance(item, Node) or (self.from_node is not None and self.from_node.ID == item.ID):
@@ -171,7 +195,7 @@ class Graph_view(QGraphicsView):
             menu = QMenu(self)
             edit_node_action = menu.addAction("Rename")
             edit_demand_action = menu.addAction("Set demand")
-            edit_center_action = menu.addAction("Set as source")
+            edit_center_action = menu.addAction("Set as center")
             delete_node_action = menu.addAction("Delete")
             action = menu.exec(event.globalPos())
             
@@ -181,8 +205,9 @@ class Graph_view(QGraphicsView):
                 self.set_demand(item.ID)
             elif action == edit_center_action:
                 self.app.set_center(item.ID)
+                self.graph_change.emit(True) 
             elif action == delete_node_action:
-                True
+                self.delete_node(item)
         elif isinstance(item, Edge):
             menu = QMenu(self)
             edit_edge_action = menu.addAction("Set cost")
@@ -192,7 +217,7 @@ class Graph_view(QGraphicsView):
             if action == edit_edge_action:
                 self.set_cost(item.ID)    
             elif action == delete_edge_action:
-                True
+                self.delete_edge(item)
         else:
             return
                 

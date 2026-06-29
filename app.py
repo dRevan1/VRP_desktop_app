@@ -1,4 +1,4 @@
-from VRP_graph import Graph
+from VRP_graph import Graph, queue
 from data_handler import Data_handler as dh
 import numpy as np
 from node import Node
@@ -12,6 +12,7 @@ class App:
         self.project_name = "New project"
         self.selected_menu_tool = 0 # od 0 postupne, ako sú v okne - 0 = kurzor, 1 = node, 2 = edge
         self.graph_change = False
+        self.refreshed = True
         
         
     #--------------------------------------------------------------------------------------------------
@@ -58,11 +59,33 @@ class App:
         self.graph.connected = False
         
         return node
-    #
-    #
-    #
-    def remove_node(self):
-        True
+    #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # vymaže vrchol, na začitaku sa podľa vyššieho ID uložia ID jeho hrán, aby sa vymazali od najvyššieho ID, teda smerom doľava sa indexovanie podľa ID maapy nepokazí, na konci sa potom
+    # raz zavolá upravenie ID a prepočet matice D, ak bol mazaný vrchol posledný izolovaný a nemal hrany, treba prepočítať D a tým skontrolovať prepojenie grafu
+    #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    def remove_node(self, node: Node, prior_q: list):
+        index = self.graph.node_ID_map[node.ID]
+        edge_ID = 0
+        edge_index = 0
+        star_count = len(self.graph.edges_star[index])
+        if node.ID == self.graph.center:
+            self.graph.center = 0
+        while len(prior_q) > 0:
+            _, edge_ID = queue.heappop(prior_q)
+            edge_index = self.graph.edge_ID_map[edge_ID]
+            self.remove_edge(self.graph.edges[edge_index])
+        
+        self.graph.node_ID_map.pop(node.ID)
+        self.graph.nodes.pop(index)
+        self.graph.edges_star.pop(index) 
+        self.graph.isolated_nodes -= 1 # ak nemá hrany, bol izolovaný, teda dáme -1, ale rovnako aj keď mal hrany, lebo pri mazaní poslednej sa označí ako izolovaný v "remove_edge"
+        self.update_node_IDs(index)
+        
+        if star_count == 0 and self.graph.isolated_nodes == 0: # ak mal vrchol hrany, na konci sa prepočíta D a zistí spojitosť siete, aktualizujú sa ID hrán
+            self.graph.reset_D()
+            self.graph.complete_distance_matrix()
+        elif star_count > 0: # ak nemal vrchol hrany a bol posledný izolovaný (bez hrán), prepočíta sa D a zistí, či je graf spojený
+            self.update_edge_IDs(edge_index)          
     #------------------------------------------------------------------------------------------------------------------------------
     # pokúsi sa nájsť hranu medzi danými vrcholmi - používa sa pri pridávaní hrany, ak sme vybrali 2 vrcholy, kde už hrana existuje
     #------------------------------------------------------------------------------------------------------------------------------
@@ -71,6 +94,17 @@ class App:
             if (out._from == _from and out.to == to): return True
         
         return False
+    #----------------------------------------------------------------------------------
+    # vráti hrany daného vrchola - list a prioritný front, list pre grafické prostredie
+    #----------------------------------------------------------------------------------
+    def get_nodes_edges(self, node: Node):
+        prior_q = []
+        edge_list = []
+        for out_edge in self.graph.edges_star[self.graph.node_ID_map[node.ID]]:
+            queue.heappush(prior_q, (-out_edge.ID, out_edge.ID))
+            edge_list.append(self.graph.edges[self.graph.edge_ID_map[out_edge.ID]])
+            
+        return edge_list, prior_q   
     #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # pridá hranu do štruktúr - do zoznamu a do hviezdy (aj symetricky), potom zníži počet izolovaných vrcholov, ak nejaké tvoriace hranu boli, následne sa prepočíta matica D
     #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -98,8 +132,40 @@ class App:
         self.graph.next_edge_ID += 1
         
         return edge
-    #
-    #
-    #
-    def remove_edge(self):
-        True
+    #-----------------------------------------------------------------------------
+    # odstráni hranu - z hviezdy (aj symetrickú, má rovnaké ID) a potom zo zoznamu
+    #-----------------------------------------------------------------------------
+    def remove_edge(self, edge: Edge):
+        index = self.graph.edge_ID_map[edge.ID]
+        star_list = self.graph.edges_star[self.graph.node_ID_map[edge._from]]
+        self.graph.edge_ID_map.pop(edge.ID)
+        
+        for i in range(len(star_list)):
+            if star_list[i].ID == edge.ID:
+                star_list.pop(i)
+                break
+        star_list = self.graph.edges_star[self.graph.node_ID_map[edge.to]]
+        for i in range(len(star_list)):
+            if star_list[i].ID == edge.ID:
+                star_list.pop(i)
+                break
+        if len(self.graph.edges_star[self.graph.node_ID_map[edge._from]]) == 0: self.graph.isolated_nodes += 1
+        if len(self.graph.edges_star[self.graph.node_ID_map[edge.to]]) == 0: self.graph.isolated_nodes += 1
+        
+        self.graph.edges.pop(index)
+    #-----------------------------------------------------------------------------------------------------------
+    # upraví ID po mazaní - od indexu najviac vľavo, kde sa mazala hrana, až po koniec zoznamu sa aktualizujú ID
+    # tiež prepočíta maticu D
+    #-----------------------------------------------------------------------------------------------------------
+    def update_edge_IDs(self, index):
+        for i in range(index, len(self.graph.edges)):
+            self.graph.edge_ID_map[self.graph.edges[i].ID] = i
+            
+        self.graph.reset_D()
+        self.graph.complete_distance_matrix()
+    #--------------------------------------
+    # aktualizácia node ID, ako pri edge ID
+    #--------------------------------------
+    def update_node_IDs(self, index):
+        for i in range(index, len(self.graph.nodes)):
+            self.graph.node_ID_map[self.graph.nodes[i].ID] = i

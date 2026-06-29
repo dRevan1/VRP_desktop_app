@@ -15,7 +15,7 @@ class Graph:
         self.nodes: list[Node] = []  # vrcholy
         self.edges_star: list[list[Edge]] = [] # hrany - hviezda, pre každý vrchol obsahuje list jeho hrán
         self.edges: list[Edge] = [] # zoznam hrán - na zápis
-        self.capacity: int = 0 # kapacita vozidiel
+        self.capacity: int = 1 # kapacita vozidiel
         self.center: int = 0
         self.mode_edges: int = 0
         self.D: list[list[int]] = []
@@ -89,7 +89,7 @@ class Graph:
                 result = 0
                 break
             for edge in self.edges_star[_from]:
-                to = edge.to - 1 # v hranách sú ID, takže pre index treba - 1
+                to = self.node_ID_map[edge.to]
                 if (g[_from] + edge.cost) < g[to]:
                     pred[to] = _from # nastavenie predchodcu pre koncový vrchol
                     g[to] = g[_from] + edge.cost # nastavenie značky pre koncový vrchol
@@ -114,7 +114,7 @@ class Graph:
     # vráti riešenie TSP pomocou metódy najbližšieho suseda zo zadaného indexu, index v parametre je číslo vrchola, teda začína od 1 
     #-------------------------------------------------------------------------------------------------------------------------------
     def get_route_NN(self, start_node):
-        no_nodes = len(self.data.nodes)
+        no_nodes = len(self.nodes)
         nodes_in_route = [0] * no_nodes  # vektor značiek pre prejdené vrcholy
         route = []
         nodes_in_route[start_node - 1] = 1

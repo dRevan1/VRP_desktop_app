@@ -1,5 +1,6 @@
-from PyQt6.QtWidgets import QToolBar, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QGraphicsScene, QFormLayout, QLabel, QGridLayout, QFileDialog, QMessageBox, QGraphicsView
-from PyQt6.QtGui import QAction, QActionGroup
+from PyQt6.QtWidgets import QToolBar, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QGraphicsScene, QFormLayout 
+from PyQt6.QtWidgets import QLabel, QGridLayout, QFileDialog, QMessageBox, QGraphicsView, QPushButton, QInputDialog
+from PyQt6.QtGui import QAction, QActionGroup, QColor
 from PyQt6.QtCore import Qt
 from graph_view import Graph_view
 from graph_scale_view import Graph_scale_view
@@ -38,6 +39,15 @@ class Main_window(QMainWindow):
         self.panel_widget = QWidget() # info panel vľavo
         self.info_panel = QFormLayout(self.panel_widget)
         self.update_info_panel([])
+        self.vrp_button = QPushButton()
+        self.vrp_button.setText("VRP")
+        self.vrp_button.clicked.connect(self.run_VRP)
+        self.refresh_button = QPushButton()
+        self.refresh_button.setText("Refresh")
+        self.refresh_button.clicked.connect(self.refresh_view)
+        self.capacity_button = QPushButton()
+        self.capacity_button.setText("Set vehicle capacity")
+        self.capacity_button.clicked.connect(self.set_capacity)
         
         # inicializácia grafu a riadkov
         self.graph_widget = QWidget() # samostatný widget pre grid layout grafu a mierok/osí
@@ -58,6 +68,9 @@ class Main_window(QMainWindow):
         self.graph_view.graph_change.connect(self.get_graph_change)
         self.graph_view.item_info.connect(self.update_info_panel)
         
+        col1.addWidget(self.vrp_button, 1)
+        col1.addWidget(self.refresh_button, 1)
+        col1.addWidget(self.capacity_button, 1)
         col1.addWidget(self.panel_widget, 9)
         col1.addWidget(self.coords_view, 1)
         row1.addLayout(col1, 1)
@@ -119,9 +132,9 @@ class Main_window(QMainWindow):
         
         self.app.project_name = "New project"
         self.graph_view.reset_canvas()
-        self.update_info_panel([])
         self.app.graph.init_structures()
         self.app.graph_change = False
+        self.update_info_panel([])
         self.save_file.setEnabled(False)
     #-------------------------------------------------------------------------------------------------------------------------------------------------------
     # akcia napojená na otvorenie súboru, ak sú neuložené zmeny, najskôr sa spýta užívateľa, či chce uložiť projekt, potom sa otvorí QFileDialog na uloženie
@@ -144,10 +157,10 @@ class Main_window(QMainWindow):
         if file_path: 
             self.app.project_name = file_path.split('/')[-1].split('.')[0] # názov otvoreného projektu bude zobrazený v aplikácii - spraví sa split podľa / a potom podľa .
             self.graph_view.reset_canvas()
-            self.update_info_panel([])
             self.app.load_new_network(file_path)
             self.save_file.setEnabled(True)
             self.app.graph_change = False
+            self.update_info_panel([])
             self.graph_view.draw_network()
     #---------------------------------------------------------------------------------------------------
     # akcia napojená na uloženie súbora z menu, spýta sa, či chce užívateľ uložiť aj maticu vzdialeností
@@ -193,6 +206,38 @@ class Main_window(QMainWindow):
             self.graph_view.selected_item.deselect()
             self.graph_view.selected_item = None
         self.graph_view.item_info.emit([])
+    #
+    #
+    #
+    def run_VRP(self):
+        if len(self.app.graph.nodes) == 0:
+            QMessageBox.critical(self, "Network empty", "Cannot run VRP, the network is empty!", QMessageBox.StandardButton.Ok, QMessageBox.StandardButton.Ok)
+            return
+        if not self.app.graph.connected:
+            QMessageBox.critical(self, "Network disconnected", "Cannot run VRP, the network is disconnected!", QMessageBox.StandardButton.Ok, QMessageBox.StandardButton.Ok)
+            return
+        if self.app.graph.center == 0:
+            QMessageBox.critical(self, "No center", "Cannot run VRP, the center is not set!", QMessageBox.StandardButton.Ok, QMessageBox.StandardButton.Ok)
+            return
+        
+            
+    #
+    #
+    #
+    def refresh_view(self):
+        for edge in self.app.graph.edges:
+            edge.unmark()
+            
+        self.console.clear()
+    #-------------------------------------------
+    # zmení kapacitu vozidiel cez dialógové okno
+    #-------------------------------------------
+    def set_capacity(self):
+        new_capacity, ok = QInputDialog.getInt(self, "Set Vehicle Capacity", "Vehicle capacity:", self.app.graph.capacity, 1)
+        if ok:
+            self.app.graph.capacity = new_capacity
+            self.update_info_panel([])
+            self.app.graph_change = True
     #--------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # aktualizuje info panel - odstráni súčasbé riadky a pridá názov projektu + všetky riadky v liste "fields" vo podobe tuple s názvom poľa a hodnotou (v pôvodnom type)
     #--------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -201,6 +246,7 @@ class Main_window(QMainWindow):
             self.info_panel.removeRow(0)
         
         self.info_panel.addRow("Project open:", QLabel(self.app.project_name))
+        self.info_panel.addRow("Vehicle capacity:", QLabel(str(self.app.graph.capacity)))
         if len(fields) == 0:
             return
         for row in fields:

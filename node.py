@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QGraphicsEllipseItem
+from PyQt6.QtWidgets import QGraphicsEllipseItem, QGraphicsTextItem
 from PyQt6.QtGui import QPen, QColor, QBrush
 
 class Node(QGraphicsEllipseItem):
@@ -12,6 +12,8 @@ class Node(QGraphicsEllipseItem):
         self.ID = ID
         self.demand = demand
         self.name = name
+        self.label = QGraphicsTextItem(str(self.ID), self)
+        self.label.setPos(8, -8)
     
     def get_string(self):
         rows = []
