@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QToolBar, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QGraphicsScene, QFormLayout 
 from PyQt6.QtWidgets import QLabel, QGridLayout, QFileDialog, QMessageBox, QGraphicsView, QPushButton, QInputDialog
-from PyQt6.QtGui import QAction, QActionGroup, QColor
+from PyQt6.QtGui import QAction, QActionGroup, QColor, QFont
 from PyQt6.QtCore import Qt
 from graph_view import Graph_view
 from graph_scale_view import Graph_scale_view
@@ -77,6 +77,8 @@ class Main_window(QMainWindow):
         row1.addWidget(self.graph_widget, 14)
         self.console = QTextEdit()
         self.console.setReadOnly(True)
+        font = QFont("Arial", 12, 15)
+        self.console.setFont(font)
         row2.addWidget(self.console)
         
         # inicializácia menu
@@ -136,6 +138,8 @@ class Main_window(QMainWindow):
         self.app.graph_change = False
         self.update_info_panel([])
         self.save_file.setEnabled(False)
+        self.console.clear()
+        self.app.refreshed = True
     #-------------------------------------------------------------------------------------------------------------------------------------------------------
     # akcia napojená na otvorenie súboru, ak sú neuložené zmeny, najskôr sa spýta užívateľa, či chce uložiť projekt, potom sa otvorí QFileDialog na uloženie
     # na konci sa aktualizuje názov otvoreného súbora pre výpis v aplikácii
@@ -162,6 +166,8 @@ class Main_window(QMainWindow):
             self.app.graph_change = False
             self.update_info_panel([])
             self.graph_view.draw_network()
+            self.console.clear()
+            self.app.refreshed = True
     #---------------------------------------------------------------------------------------------------
     # akcia napojená na uloženie súbora z menu, spýta sa, či chce užívateľ uložiť aj maticu vzdialeností
     # na konci je info okno, keď sa projekt uložil úspešne
@@ -206,9 +212,9 @@ class Main_window(QMainWindow):
             self.graph_view.selected_item.deselect()
             self.graph_view.selected_item = None
         self.graph_view.item_info.emit([])
-    #
-    #
-    #
+    #----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # skontroluje, či sa dá psustiť VRP a ak áno, spustí sa a aktualizuje graf, zároveň vypíše výsledok do konzoly (príkazový riadok) a do "konzoly" / textového poľa v aplikácii
+    #----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     def run_VRP(self):
         if len(self.app.graph.nodes) == 0:
             QMessageBox.critical(self, "Network empty", "Cannot run VRP, the network is empty!", QMessageBox.StandardButton.Ok, QMessageBox.StandardButton.Ok)
@@ -220,19 +226,31 @@ class Main_window(QMainWindow):
             QMessageBox.critical(self, "No center", "Cannot run VRP, the center is not set!", QMessageBox.StandardButton.Ok, QMessageBox.StandardButton.Ok)
             return
         
-            
-    #
-    #
-    #
+        if not self.app.refreshed:
+            self.refresh_view()
+        console_info = self.app.run_VRP()
+        for v_edge in self.app.virtual_edges:
+            self.graph_view.scene().addItem(v_edge)
+        self.update_console(console_info)
+        self.app.refreshed = False        
+    #--------------------------------------------------------------------------------
+    # refresh konzoly a grafu po spustení VRP - vyznačenie ciest a výsledok z konzoly
+    #--------------------------------------------------------------------------------
     def refresh_view(self):
         for edge in self.app.graph.edges:
             edge.unmark()
-            
+        while len(self.app.virtual_edges) > 0:
+            self.graph_view.scene().removeItem(self.app.virtual_edges[-1])
+            self.app.virtual_edges.pop(-1)
+        
         self.console.clear()
+        self.app.refreshed = True
     #-------------------------------------------
     # zmení kapacitu vozidiel cez dialógové okno
     #-------------------------------------------
     def set_capacity(self):
+        if not self.app.refreshed:
+            return
         new_capacity, ok = QInputDialog.getInt(self, "Set Vehicle Capacity", "Vehicle capacity:", self.app.graph.capacity, 1)
         if ok:
             self.app.graph.capacity = new_capacity
@@ -244,13 +262,15 @@ class Main_window(QMainWindow):
     def update_info_panel(self, fields: list[tuple]):
         while self.info_panel.rowCount():
             self.info_panel.removeRow(0)
-        
+              
         self.info_panel.addRow("Project open:", QLabel(self.app.project_name))
         self.info_panel.addRow("Vehicle capacity:", QLabel(str(self.app.graph.capacity)))
-        if len(fields) == 0:
-            return
         for row in fields:
             self.info_panel.addRow(row[0] + ": ", QLabel(str(row[1])))
+            
+    def update_console(self, rows: list):       
+        for row in rows:
+            self.console.append(row)
     #------------------------------------------------------------------------------------------------------------------
     # override close eventu, pred ukončením aplikácie sa pri neuložených zmenách spýta, či chce užívateľ uložiť projekt
     #------------------------------------------------------------------------------------------------------------------    

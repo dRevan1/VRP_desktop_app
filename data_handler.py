@@ -43,7 +43,7 @@ class Data_handler:
                 _from_ID = to_ID = cost = -1
                 if graph.mode_edges == 0: # ceny sú zadané
                     _from_ID, to_ID, cost = f.readline().split()
-                    _from, to = graph.node_ID_map[_from_ID], graph.node_ID_map[to_ID] # index cez ID z mapy
+                    _from, to = graph.node_ID_map[int(_from_ID)], graph.node_ID_map[int(to_ID)] # index cez ID z mapy
                 elif graph.mode_edges == 1: # ceny sa počítajú L2 normou
                     _from_ID, to_ID = map(int, f.readline().split())
                     _from, to = graph.node_ID_map[_from_ID], graph.node_ID_map[to_ID]

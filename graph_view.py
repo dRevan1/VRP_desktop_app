@@ -4,6 +4,7 @@ from PyQt6.QtCore import QLineF, pyqtSignal, QPointF, Qt
 from app import App
 from node import Node
 from edge import Edge
+from virtual_edge import Virtual_edge as V_edge
 
 #---------------------------------------------------------------------------------------------
 # táto trieda obsahuje okno s grafom a mriežkou (+ osi), stará sa o vykresľovanie v tomto okne
@@ -117,7 +118,6 @@ class Graph_view(QGraphicsView):
         new_cost, ok = QInputDialog.getDouble(self, "Set edge cost", "Edge cost:", value=edge.cost, min=0.0, decimals=2)
         if ok and new_cost:
             edge.cost = new_cost
-            edge.label.setPlainText(str(round(edge.cost, 2)))
             self.item_info.emit(edge.get_string())
             self.graph_change.emit(True)
     #-------------------------------
@@ -156,7 +156,7 @@ class Graph_view(QGraphicsView):
         
         if self.app.selected_menu_tool == 0:
             item = self.itemAt(event.pos())
-            if isinstance(item, Node) or isinstance(item, Edge):
+            if isinstance(item, Node) or isinstance(item, Edge) or isinstance(item, V_edge):
                 info = item.get_string()
                 if self.selected_item is not None:
                     self.selected_item.deselect()
@@ -187,7 +187,7 @@ class Graph_view(QGraphicsView):
     # event na kontext menu - keď sa pravým tlačidlom klikne na vrchol/hranu - zoznam akcií
     #--------------------------------------------------------------------------------------
     def contextMenuEvent(self, event):
-        if self.app.selected_menu_tool != 0:
+        if self.app.selected_menu_tool != 0 or not self.app.refreshed:
             return
         
         item = self.itemAt(event.pos())      

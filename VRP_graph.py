@@ -110,6 +110,53 @@ class Graph:
             path.reverse()
         
         return result, path_cost, path
+    #-----------------------------------------------------------------------------------------
+    # spustí VRP - nájde riešenie TSP cez nearest neighbor a potom rozdelí na jednotlivé trasy
+    #-----------------------------------------------------------------------------------------
+    def run_VRP(self):
+        TSP_route, TSP_length = self.get_route_NN(self.center)
+        TSP_route_print = ""
+    
+        for i in range(len(TSP_route) - 1):
+            TSP_route_print += f"{self.nodes[TSP_route[i]].ID}->"
+        TSP_route_print += f"{self.nodes[TSP_route[-1]].ID}"
+        
+        self.get_subtoures(TSP_route)
+        subtoures_print = self.get_subtoures_strings(self.routes)
+        str_row_list = []
+        
+        print("/////////////////////////////////////////////////////////////////////")
+        print("Vehicle Routing Problem")
+        print(f"Number of nodes: {len(self.nodes)}")
+        print("Method used: Route First-Cluster Second")
+        print("---------------------------------------------------------------------")
+        print(f"TSP route using nearest neighbor: {TSP_route_print}")
+        print(f"TSP route length: {TSP_length}")
+        print("---------------------------------------------------------------------")
+        print("Subtoures (clusters):")
+        for i in range(len(self.routes)):
+            print(f"Subtour {i+1}:")
+            print(f"{subtoures_print[i]}\n")
+        print("/////////////////////////////////////////////////////////////////////")
+        
+        str_row_list.append("/////////////////////////////////////////////////////////////////////")
+        str_row_list.append("Vehicle Routing Problem")
+        str_row_list.append(f"Number of nodes: {len(self.nodes)}")
+        str_row_list.append("Method used: Route First-Cluster Second")
+        str_row_list.append("---------------------------------------------------------------------")
+        str_row_list.append(f"TSP route using nearest neighbor: {TSP_route_print}")
+        str_row_list.append(f"TSP route length: {TSP_length}")
+        str_row_list.append("---------------------------------------------------------------------")
+        str_row_list.append("Subtoures (clusters):")
+        for i in range(len(self.routes)):
+            str_row_list.append(f"Subtour {i+1}:")
+            str_row_list.append(f"{subtoures_print[i]}\n")
+        str_row_list.append("/////////////////////////////////////////////////////////////////////")
+        
+        return str_row_list
+        
+        
+        
     #-------------------------------------------------------------------------------------------------------------------------------
     # vráti riešenie TSP pomocou metódy najbližšieho suseda zo zadaného indexu, index v parametre je číslo vrchola, teda začína od 1 
     #-------------------------------------------------------------------------------------------------------------------------------
@@ -117,8 +164,8 @@ class Graph:
         no_nodes = len(self.nodes)
         nodes_in_route = [0] * no_nodes  # vektor značiek pre prejdené vrcholy
         route = []
-        nodes_in_route[start_node - 1] = 1
-        route.append(start_node - 1)
+        nodes_in_route[self.node_ID_map[start_node]] = 1
+        route.append(self.node_ID_map[start_node])
         route_length = 0
     
         for i in range(no_nodes - 1):
@@ -135,7 +182,7 @@ class Graph:
             nodes_in_route[nearest_neighbor] = 1
             route_length += self.D[current_node][nearest_neighbor]
     
-        route.append(start_node - 1)  # nakoniec sa pridá počiatočný vrchol na uzavretie trasy
+        route.append(self.node_ID_map[start_node])  # nakoniec sa pridá počiatočný vrchol na uzavretie trasy
     
         return route, route_length 
     #-------------------------------------------------------------------------------------------------------------------------------------------------
@@ -161,15 +208,15 @@ class Graph:
     #------------------------------------------------------------------------------------------------------------------------
     # pomocná metóda, ktorá zoberie subtoures tuple (list vrcholov, využitá kapacita) a spraví z každej jazdy string na print
     #------------------------------------------------------------------------------------------------------------------------
-    def get_subtoures_strings(subtoures):
+    def get_subtoures_strings(self, subtoures):
             strings = []
             for i in range(len(subtoures)):
                 string = ""
                 subtour_tuple = subtoures[i]
             
                 for j in range(len(subtour_tuple[0]) - 1):
-                    string += f"{subtour_tuple[0][j] + 1}->"
-                string += f"{subtour_tuple[0][0] + 1}\nUsed capacity: {subtour_tuple[1]}"
+                    string += f"{self.nodes[subtour_tuple[0][j]].ID}->"
+                string += f"{self.nodes[subtour_tuple[0][0]].ID}\nUsed capacity: {subtour_tuple[1]}"
                 strings.append(string)
             
             return strings

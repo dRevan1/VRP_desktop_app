@@ -12,9 +12,7 @@ class Edge(QGraphicsLineItem):
         self._from = _from
         self.to = to
         self.cost = cost
-        self.label = QGraphicsTextItem(str(self.cost), self)
-        line = self.line()
-        self.label.setPos((line.x1() + line.x2()) / 2, (line.y1() + line.y2()) / 2)
+        
         
     def get_string(self):
         rows = []

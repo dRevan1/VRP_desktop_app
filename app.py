@@ -4,6 +4,7 @@ import numpy as np
 from node import Node
 from edge import Edge
 from virtual_edge import Virtual_edge as V_edge
+from PyQt6.QtGui import QColor
 
 class App:
     def __init__(self):
@@ -13,6 +14,8 @@ class App:
         self.selected_menu_tool = 0 # od 0 postupne, ako sú v okne - 0 = kurzor, 1 = node, 2 = edge
         self.graph_change = False
         self.refreshed = True
+        self.colors = ["blue", "orange", "yellow", "purple", "brown", "darkRed", "green", "cyan", "darkBlue", "magenta"]
+        self.virtual_edges = []
         
         
     #--------------------------------------------------------------------------------------------------
@@ -169,3 +172,30 @@ class App:
     def update_node_IDs(self, index):
         for i in range(index, len(self.graph.nodes)):
             self.graph.node_ID_map[self.graph.nodes[i].ID] = i
+            
+    def run_VRP(self):
+        info = self.graph.run_VRP()
+        for i in range(len(self.graph.routes)):
+            color = self.colors[i % len(self.colors)]
+            for j in range(len(self.graph.routes[i][0]) - 1):
+                _from = self.graph.routes[i][0][j]
+                to = self.graph.nodes[self.graph.routes[i][0][j + 1]].ID
+                edge_id = 0
+                for edge in self.graph.edges_star[_from]:
+                    if edge.to == to:
+                        edge_id = edge.ID
+                        break        
+                if edge_id != 0:
+                    self.graph.edges[self.graph.edge_ID_map[edge_id]].mark(QColor(color))
+                else:
+                   *_, cost, path = self.graph.run_A_star(_from, self.graph.node_ID_map[to])
+                   for k in range(len(path)):
+                       path[k] = self.graph.nodes[path[k]].ID
+                   _from_node = self.graph.nodes[_from]
+                   to_node = self.graph.nodes[self.graph.node_ID_map[to]]
+                   virtual_edge = V_edge(_from_node.ID, _from_node.pos().x(), _from_node.pos().y(), to, to_node.pos().x(), to_node.pos().y(), cost, path)
+                   virtual_edge.mark(QColor(color))
+                   self.virtual_edges.append(virtual_edge)
+                
+          
+        return info

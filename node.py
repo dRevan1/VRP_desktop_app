@@ -13,7 +13,10 @@ class Node(QGraphicsEllipseItem):
         self.demand = demand
         self.name = name
         self.label = QGraphicsTextItem(str(self.ID), self)
-        self.label.setPos(8, -8)
+        self.label.setPos(6, -6)
+        font = self.label.font()
+        font.setPointSize(5)
+        self.label.setFont(font)
     
     def get_string(self):
         rows = []
