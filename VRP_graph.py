@@ -153,10 +153,7 @@ class Graph:
             str_row_list.append(f"{subtoures_print[i]}\n")
         str_row_list.append("/////////////////////////////////////////////////////////////////////")
         
-        return str_row_list
-        
-        
-        
+        return str_row_list      
     #-------------------------------------------------------------------------------------------------------------------------------
     # vráti riešenie TSP pomocou metódy najbližšieho suseda zo zadaného indexu, index v parametre je číslo vrchola, teda začína od 1 
     #-------------------------------------------------------------------------------------------------------------------------------

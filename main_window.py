@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QToolBar, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QGraphicsScene, QFormLayout 
 from PyQt6.QtWidgets import QLabel, QGridLayout, QFileDialog, QMessageBox, QGraphicsView, QPushButton, QInputDialog
-from PyQt6.QtGui import QAction, QActionGroup, QColor, QFont
+from PyQt6.QtGui import QAction, QActionGroup, QFont
 from PyQt6.QtCore import Qt
 from graph_view import Graph_view
 from graph_scale_view import Graph_scale_view

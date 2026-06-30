@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QGraphicsLineItem, QGraphicsTextItem
+from PyQt6.QtWidgets import QGraphicsLineItem
 from PyQt6.QtGui import QPen, QColor
 from PyQt6.QtCore import Qt
 
